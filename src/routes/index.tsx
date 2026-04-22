@@ -162,13 +162,14 @@ function QRBuilder() {
 
   const renderToCanvas = useCallback(
     async (targetSize: number): Promise<HTMLCanvasElement> => {
-      // Render QR as black-on-transparent mask, then composite gradients.
-      const maskCanvas = document.createElement("canvas");
-      await QRCode.toCanvas(maskCanvas, url, {
-        errorCorrectionLevel: effectiveEc,
+      // Build matrix and render styled modules into a black-on-transparent mask
+      const matrix = await getQRMatrix(url, effectiveEc);
+      const maskCanvas = renderQRToCanvas({
+        matrix,
+        pixelSize: targetSize,
         margin,
-        width: targetSize,
-        color: { dark: "#000000ff", light: "#00000000" },
+        moduleStyle,
+        eyeStyle,
       });
 
       const out = document.createElement("canvas");
@@ -197,7 +198,17 @@ function QRBuilder() {
 
       return out;
     },
-    [url, effectiveEc, margin, fg, bg, bgTransparent, drawLogoOnCanvas],
+    [
+      url,
+      effectiveEc,
+      margin,
+      fg,
+      bg,
+      bgTransparent,
+      drawLogoOnCanvas,
+      moduleStyle,
+      eyeStyle,
+    ],
   );
 
   const buildSvg = useCallback(async (): Promise<string> => {
