@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   Upload,
   Trash2,
+  Shapes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
