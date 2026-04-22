@@ -90,7 +90,7 @@ function QRBuilder() {
       ctx.drawImage(fgCanvas, 0, 0);
       return out;
     },
-    [url, ecLevel, margin, fg, bg],
+    [url, ecLevel, margin, fg, bg, bgTransparent],
   );
 
   const buildSvg = useCallback(async (): Promise<string> => {
