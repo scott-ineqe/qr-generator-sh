@@ -117,30 +117,34 @@ function QRBuilder() {
     async (ctx: CanvasRenderingContext2D, targetSize: number) => {
       if (!logoDataUrl) return;
       const img = await loadImage(logoDataUrl);
-      const logoSize = Math.round((targetSize * logoScale) / 100);
-      const cx = (targetSize - logoSize) / 2;
-      const cy = (targetSize - logoSize) / 2;
-      const padPx = Math.round(logoSize * 0.12);
-      const padSize = logoSize + padPx * 2;
+      // Slider controls the WIDTH only; height follows the image's natural aspect ratio.
+      const logoW = Math.round((targetSize * logoScale) / 100);
+      const aspect = img.naturalHeight / img.naturalWidth || 1;
+      const logoH = Math.round(logoW * aspect);
+      const cx = (targetSize - logoW) / 2;
+      const cy = (targetSize - logoH) / 2;
+      const padPx = Math.round(Math.max(logoW, logoH) * 0.12);
+      const padW = logoW + padPx * 2;
+      const padH = logoH + padPx * 2;
       const padX = cx - padPx;
       const padY = cy - padPx;
 
       if (logoPadding) {
         ctx.save();
         ctx.fillStyle = "#ffffff";
-        const r = logoRounded ? padSize * 0.18 : 0;
-        roundedRectPath(ctx, padX, padY, padSize, padSize, r);
+        const r = logoRounded ? Math.min(padW, padH) * 0.18 : 0;
+        roundedRectPath(ctx, padX, padY, padW, padH, r);
         ctx.fill();
         ctx.restore();
       }
 
       ctx.save();
       if (logoRounded) {
-        const r = logoSize * 0.16;
-        roundedRectPath(ctx, cx, cy, logoSize, logoSize, r);
+        const r = Math.min(logoW, logoH) * 0.16;
+        roundedRectPath(ctx, cx, cy, logoW, logoH, r);
         ctx.clip();
       }
-      ctx.drawImage(img, cx, cy, logoSize, logoSize);
+      ctx.drawImage(img, cx, cy, logoW, logoH);
       ctx.restore();
     },
     [logoDataUrl, logoScale, logoPadding, logoRounded],
