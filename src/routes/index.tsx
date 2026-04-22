@@ -402,7 +402,19 @@ function QRBuilder() {
                   backgroundSize: "20px 20px",
                 }}
               >
-                <div className="flex aspect-square items-center justify-center rounded-2xl bg-background">
+                <div
+                  className="flex aspect-square items-center justify-center rounded-2xl bg-background"
+                  style={
+                    bgTransparent && dataUrl
+                      ? {
+                          backgroundImage:
+                            "linear-gradient(45deg, oklch(0.9 0 0) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.9 0 0) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.9 0 0) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.9 0 0) 75%)",
+                          backgroundSize: "20px 20px",
+                          backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+                        }
+                      : undefined
+                  }
+                >
                   {dataUrl ? (
                     <img
                       src={dataUrl}
