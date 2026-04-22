@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   GradientField,
   type GradientValue,
@@ -48,6 +49,7 @@ function QRBuilder() {
   const [generatedUrl, setGeneratedUrl] = useState("");
   const [fg, setFg] = useState<GradientValue>(defaultGradient("#1a1033"));
   const [bg, setBg] = useState<GradientValue>(defaultGradient("#ffffff"));
+  const [bgTransparent, setBgTransparent] = useState(false);
   const [size, setSize] = useState(512);
   const [margin, setMargin] = useState(2);
   const [ecLevel, setEcLevel] = useState<ECLevel>("M");
@@ -71,8 +73,10 @@ function QRBuilder() {
       out.height = targetSize;
       const ctx = out.getContext("2d")!;
 
-      // Background
-      paintGradient(ctx, bg, targetSize);
+      // Background (skip when transparent)
+      if (!bgTransparent) {
+        paintGradient(ctx, bg, targetSize);
+      }
 
       // Foreground gradient masked by QR modules
       const fgCanvas = document.createElement("canvas");
@@ -86,7 +90,7 @@ function QRBuilder() {
       ctx.drawImage(fgCanvas, 0, 0);
       return out;
     },
-    [url, ecLevel, margin, fg, bg],
+    [url, ecLevel, margin, fg, bg, bgTransparent],
   );
 
   const buildSvg = useCallback(async (): Promise<string> => {
@@ -145,12 +149,12 @@ function QRBuilder() {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges" width="${size}" height="${size}">
   <defs>
     ${gradDef("fgGrad", fg)}
-    ${gradDef("bgGrad", bg)}
+    ${bgTransparent ? "" : gradDef("bgGrad", bg)}
   </defs>
-  <rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>
+  ${bgTransparent ? "" : `<rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>`}
   ${modulePath ? `<path d="${modulePath}" fill="${fgFill}"/>` : ""}
 </svg>`;
-  }, [url, ecLevel, margin, fg, bg, size]);
+  }, [url, ecLevel, margin, fg, bg, size, bgTransparent]);
 
   const generate = useCallback(async () => {
     if (!url.trim()) {
@@ -197,7 +201,12 @@ function QRBuilder() {
         flat.width = size;
         flat.height = size;
         const fctx = flat.getContext("2d")!;
-        paintGradient(fctx, bg, size);
+        if (bgTransparent) {
+          fctx.fillStyle = "#ffffff";
+          fctx.fillRect(0, 0, size, size);
+        } else {
+          paintGradient(fctx, bg, size);
+        }
         fctx.drawImage(canvas, 0, 0);
         downloadFile(flat.toDataURL("image/jpeg", 0.95), "qrcode.jpg");
       }
@@ -245,11 +254,29 @@ function QRBuilder() {
                 <div className="flex items-center gap-3">
                   <div
                     className="h-8 w-8 shrink-0 rounded-md border border-border"
-                    style={{ background: gradientPreviewCss(bg) }}
+                    style={
+                      bgTransparent
+                        ? {
+                            backgroundImage:
+                              "linear-gradient(45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.85 0 0) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.85 0 0) 75%)",
+                            backgroundSize: "8px 8px",
+                            backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
+                          }
+                        : { background: gradientPreviewCss(bg) }
+                    }
                   />
                   <span className="text-xs font-medium">Background</span>
                 </div>
-                <GradientField label="Fill" value={bg} onChange={setBg} />
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={bgTransparent}
+                    onCheckedChange={(v) => setBgTransparent(v === true)}
+                  />
+                  <span>Transparent background</span>
+                </label>
+                {!bgTransparent && (
+                  <GradientField label="Fill" value={bg} onChange={setBg} />
+                )}
               </div>
             </section>
 
@@ -375,7 +402,19 @@ function QRBuilder() {
                   backgroundSize: "20px 20px",
                 }}
               >
-                <div className="flex aspect-square items-center justify-center rounded-2xl bg-background">
+                <div
+                  className="flex aspect-square items-center justify-center rounded-2xl bg-background"
+                  style={
+                    bgTransparent && dataUrl
+                      ? {
+                          backgroundImage:
+                            "linear-gradient(45deg, oklch(0.9 0 0) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.9 0 0) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.9 0 0) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.9 0 0) 75%)",
+                          backgroundSize: "20px 20px",
+                          backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+                        }
+                      : undefined
+                  }
+                >
                   {dataUrl ? (
                     <img
                       src={dataUrl}
