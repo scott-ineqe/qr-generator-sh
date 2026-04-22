@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useCallback } from "react";
-import QRCode from "qrcode";
+import {
+  getQRMatrix,
+  renderQRToCanvas,
+  renderQRToSvgPath,
+  MODULE_STYLE_OPTIONS,
+  EYE_STYLE_OPTIONS,
+  type ModuleStyle,
+  type EyeStyle,
+} from "@/lib/qr-modules";
 import {
   QrCode,
   Sparkles,
