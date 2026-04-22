@@ -212,25 +212,17 @@ function QRBuilder() {
   );
 
   const buildSvg = useCallback(async (): Promise<string> => {
-    // Build an SVG with gradient defs and use the QR path geometry.
-    const baseSvg = await QRCode.toString(url, {
-      errorCorrectionLevel: effectiveEc,
+    const matrix = await getQRMatrix(url, effectiveEc);
+    const { pathD, size: vbSide } = renderQRToSvgPath({
+      matrix,
+      pixelSize: 0,
       margin,
-      type: "svg",
-      color: { dark: "#000000", light: "#ffffff" },
+      moduleStyle,
+      eyeStyle,
     });
-
-    const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
-    const pathMatch = baseSvg.match(/<path[^>]*d="([^"]+)"[^>]*\/>/g);
-    const viewBox = viewBoxMatch?.[1] ?? `0 0 ${size} ${size}`;
-    const [, , vbW, vbH] = viewBox.split(" ").map(Number);
-
-    // The qrcode lib outputs two paths: bg rect path + modules path.
-    // The last path is the modules.
-    const modulePath =
-      pathMatch && pathMatch.length > 0
-        ? pathMatch[pathMatch.length - 1].match(/d="([^"]+)"/)?.[1]
-        : "";
+    const vbW = vbSide;
+    const vbH = vbSide;
+    const viewBox = `0 0 ${vbW} ${vbH}`;
 
     const gradDef = (id: string, g: GradientValue): string => {
       if (g.type === "solid" || g.stops.length < 2) {
@@ -263,7 +255,7 @@ function QRBuilder() {
         ? bg.stops[0]?.color ?? "#fff"
         : "url(#bgGrad)";
 
-    // Optional centered logo
+    // Optional centered logo (coords in viewBox units = modules)
     let logoSvg = "";
     let logoClipDef = "";
     if (logoDataUrl) {
@@ -291,14 +283,14 @@ function QRBuilder() {
     }
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges" width="${size}" height="${size}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${size}" height="${size}">
   <defs>
     ${gradDef("fgGrad", fg)}
     ${bgTransparent ? "" : gradDef("bgGrad", bg)}
     ${logoClipDef}
   </defs>
   ${bgTransparent ? "" : `<rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>`}
-  ${modulePath ? `<path d="${modulePath}" fill="${fgFill}"/>` : ""}
+  <path d="${pathD}" fill="${fgFill}" fill-rule="evenodd"/>
   ${logoSvg}
 </svg>`;
   }, [
@@ -313,6 +305,8 @@ function QRBuilder() {
     logoScale,
     logoPadding,
     logoRounded,
+    moduleStyle,
+    eyeStyle,
   ]);
 
   const generate = useCallback(async () => {
