@@ -82,6 +82,8 @@ function QRBuilder() {
   const [size, setSize] = useState(512);
   const [margin, setMargin] = useState(2);
   const [ecLevel, setEcLevel] = useState<ECLevel>("M");
+  const [moduleStyle, setModuleStyle] = useState<ModuleStyle>("square");
+  const [eyeStyle, setEyeStyle] = useState<EyeStyle>("square");
   const [dataUrl, setDataUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState<string>("");
