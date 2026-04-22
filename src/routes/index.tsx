@@ -58,7 +58,42 @@ function QRBuilder() {
   const [ecLevel, setEcLevel] = useState<ECLevel>("M");
   const [dataUrl, setDataUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [logoDataUrl, setLogoDataUrl] = useState<string>("");
+  const [logoScale, setLogoScale] = useState(20); // % of QR size
+  const [logoPadding, setLogoPadding] = useState(true);
+  const [logoRounded, setLogoRounded] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<string>("");
+
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+
+  const handleLogoUpload = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image is too large (max 4MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setLogoDataUrl(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  // Auto-boost error correction when a logo is present so the QR remains scannable
+  const effectiveEc: ECLevel = logoDataUrl
+    ? ecLevel === "L" || ecLevel === "M"
+      ? "H"
+      : ecLevel
+    : ecLevel;
 
   const renderToCanvas = useCallback(
     async (targetSize: number): Promise<HTMLCanvasElement> => {
