@@ -49,6 +49,7 @@ function QRBuilder() {
   const [generatedUrl, setGeneratedUrl] = useState("");
   const [fg, setFg] = useState<GradientValue>(defaultGradient("#1a1033"));
   const [bg, setBg] = useState<GradientValue>(defaultGradient("#ffffff"));
+  const [bgTransparent, setBgTransparent] = useState(false);
   const [size, setSize] = useState(512);
   const [margin, setMargin] = useState(2);
   const [ecLevel, setEcLevel] = useState<ECLevel>("M");
