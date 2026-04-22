@@ -73,8 +73,10 @@ function QRBuilder() {
       out.height = targetSize;
       const ctx = out.getContext("2d")!;
 
-      // Background
-      paintGradient(ctx, bg, targetSize);
+      // Background (skip when transparent)
+      if (!bgTransparent) {
+        paintGradient(ctx, bg, targetSize);
+      }
 
       // Foreground gradient masked by QR modules
       const fgCanvas = document.createElement("canvas");
