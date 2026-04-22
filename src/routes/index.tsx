@@ -238,16 +238,53 @@ function QRBuilder() {
         ? bg.stops[0]?.color ?? "#fff"
         : "url(#bgGrad)";
 
+    // Optional centered logo
+    let logoSvg = "";
+    let logoClipDef = "";
+    if (logoDataUrl) {
+      const logoSize = (vbW * logoScale) / 100;
+      const cx = (vbW - logoSize) / 2;
+      const cy = (vbH - logoSize) / 2;
+      const padPx = logoSize * 0.12;
+      const padSize = logoSize + padPx * 2;
+      const padX = cx - padPx;
+      const padY = cy - padPx;
+      const padR = logoRounded ? padSize * 0.18 : 0;
+      const logoR = logoRounded ? logoSize * 0.16 : 0;
+      const padRect = logoPadding
+        ? `<rect x="${padX}" y="${padY}" width="${padSize}" height="${padSize}" rx="${padR}" ry="${padR}" fill="#ffffff"/>`
+        : "";
+      if (logoRounded) {
+        logoClipDef = `<clipPath id="logoClip"><rect x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" rx="${logoR}" ry="${logoR}"/></clipPath>`;
+      }
+      const clipAttr = logoRounded ? ` clip-path="url(#logoClip)"` : "";
+      logoSvg = `${padRect}<image href="${logoDataUrl}" x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"${clipAttr}/>`;
+    }
+
     return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges" width="${size}" height="${size}">
   <defs>
     ${gradDef("fgGrad", fg)}
     ${bgTransparent ? "" : gradDef("bgGrad", bg)}
+    ${logoClipDef}
   </defs>
   ${bgTransparent ? "" : `<rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>`}
   ${modulePath ? `<path d="${modulePath}" fill="${fgFill}"/>` : ""}
+  ${logoSvg}
 </svg>`;
-  }, [url, ecLevel, margin, fg, bg, size, bgTransparent]);
+  }, [
+    url,
+    effectiveEc,
+    margin,
+    fg,
+    bg,
+    size,
+    bgTransparent,
+    logoDataUrl,
+    logoScale,
+    logoPadding,
+    logoRounded,
+  ]);
 
   const generate = useCallback(async () => {
     if (!url.trim()) {
