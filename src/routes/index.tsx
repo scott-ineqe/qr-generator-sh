@@ -9,6 +9,9 @@ import {
   Settings2,
   Link as LinkIcon,
   ChevronDown,
+  Image as ImageIcon,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +47,24 @@ export const Route = createFileRoute("/")({
 
 type ECLevel = "L" | "M" | "Q" | "H";
 
+function roundedRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
 function QRBuilder() {
   const [url, setUrl] = useState("");
   const [generatedUrl, setGeneratedUrl] = useState("");
@@ -55,14 +76,82 @@ function QRBuilder() {
   const [ecLevel, setEcLevel] = useState<ECLevel>("M");
   const [dataUrl, setDataUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [logoDataUrl, setLogoDataUrl] = useState<string>("");
+  const [logoScale, setLogoScale] = useState(20); // % of QR size
+  const [logoPadding, setLogoPadding] = useState(true);
+  const [logoRounded, setLogoRounded] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<string>("");
+
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+
+  const handleLogoUpload = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image is too large (max 4MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setLogoDataUrl(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  // Auto-boost error correction when a logo is present so the QR remains scannable
+  const effectiveEc: ECLevel = logoDataUrl
+    ? ecLevel === "L" || ecLevel === "M"
+      ? "H"
+      : ecLevel
+    : ecLevel;
+
+  const drawLogoOnCanvas = useCallback(
+    async (ctx: CanvasRenderingContext2D, targetSize: number) => {
+      if (!logoDataUrl) return;
+      const img = await loadImage(logoDataUrl);
+      const logoSize = Math.round((targetSize * logoScale) / 100);
+      const cx = (targetSize - logoSize) / 2;
+      const cy = (targetSize - logoSize) / 2;
+      const padPx = Math.round(logoSize * 0.12);
+      const padSize = logoSize + padPx * 2;
+      const padX = cx - padPx;
+      const padY = cy - padPx;
+
+      if (logoPadding) {
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        const r = logoRounded ? padSize * 0.18 : 0;
+        roundedRectPath(ctx, padX, padY, padSize, padSize, r);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.save();
+      if (logoRounded) {
+        const r = logoSize * 0.16;
+        roundedRectPath(ctx, cx, cy, logoSize, logoSize, r);
+        ctx.clip();
+      }
+      ctx.drawImage(img, cx, cy, logoSize, logoSize);
+      ctx.restore();
+    },
+    [logoDataUrl, logoScale, logoPadding, logoRounded],
+  );
 
   const renderToCanvas = useCallback(
     async (targetSize: number): Promise<HTMLCanvasElement> => {
       // Render QR as black-on-transparent mask, then composite gradients.
       const maskCanvas = document.createElement("canvas");
       await QRCode.toCanvas(maskCanvas, url, {
-        errorCorrectionLevel: ecLevel,
+        errorCorrectionLevel: effectiveEc,
         margin,
         width: targetSize,
         color: { dark: "#000000ff", light: "#00000000" },
@@ -88,15 +177,19 @@ function QRBuilder() {
       fgCtx.drawImage(maskCanvas, 0, 0, targetSize, targetSize);
 
       ctx.drawImage(fgCanvas, 0, 0);
+
+      // Logo on top
+      await drawLogoOnCanvas(ctx, targetSize);
+
       return out;
     },
-    [url, ecLevel, margin, fg, bg, bgTransparent],
+    [url, effectiveEc, margin, fg, bg, bgTransparent, drawLogoOnCanvas],
   );
 
   const buildSvg = useCallback(async (): Promise<string> => {
     // Build an SVG with gradient defs and use the QR path geometry.
     const baseSvg = await QRCode.toString(url, {
-      errorCorrectionLevel: ecLevel,
+      errorCorrectionLevel: effectiveEc,
       margin,
       type: "svg",
       color: { dark: "#000000", light: "#ffffff" },
@@ -145,16 +238,53 @@ function QRBuilder() {
         ? bg.stops[0]?.color ?? "#fff"
         : "url(#bgGrad)";
 
+    // Optional centered logo
+    let logoSvg = "";
+    let logoClipDef = "";
+    if (logoDataUrl) {
+      const logoSize = (vbW * logoScale) / 100;
+      const cx = (vbW - logoSize) / 2;
+      const cy = (vbH - logoSize) / 2;
+      const padPx = logoSize * 0.12;
+      const padSize = logoSize + padPx * 2;
+      const padX = cx - padPx;
+      const padY = cy - padPx;
+      const padR = logoRounded ? padSize * 0.18 : 0;
+      const logoR = logoRounded ? logoSize * 0.16 : 0;
+      const padRect = logoPadding
+        ? `<rect x="${padX}" y="${padY}" width="${padSize}" height="${padSize}" rx="${padR}" ry="${padR}" fill="#ffffff"/>`
+        : "";
+      if (logoRounded) {
+        logoClipDef = `<clipPath id="logoClip"><rect x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" rx="${logoR}" ry="${logoR}"/></clipPath>`;
+      }
+      const clipAttr = logoRounded ? ` clip-path="url(#logoClip)"` : "";
+      logoSvg = `${padRect}<image href="${logoDataUrl}" x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"${clipAttr}/>`;
+    }
+
     return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges" width="${size}" height="${size}">
   <defs>
     ${gradDef("fgGrad", fg)}
     ${bgTransparent ? "" : gradDef("bgGrad", bg)}
+    ${logoClipDef}
   </defs>
   ${bgTransparent ? "" : `<rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>`}
   ${modulePath ? `<path d="${modulePath}" fill="${fgFill}"/>` : ""}
+  ${logoSvg}
 </svg>`;
-  }, [url, ecLevel, margin, fg, bg, size, bgTransparent]);
+  }, [
+    url,
+    effectiveEc,
+    margin,
+    fg,
+    bg,
+    size,
+    bgTransparent,
+    logoDataUrl,
+    logoScale,
+    logoPadding,
+    logoRounded,
+  ]);
 
   const generate = useCallback(async () => {
     if (!url.trim()) {
@@ -328,6 +458,97 @@ function QRBuilder() {
                   </SelectContent>
                 </Select>
               </div>
+            </section>
+
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <ImageIcon className="h-3.5 w-3.5" />
+                Logo
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleLogoUpload(f);
+                  e.target.value = "";
+                }}
+              />
+
+              {logoDataUrl ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-2">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-white">
+                      <img src={logoDataUrl} alt="Logo preview" className="h-full w-full object-contain" />
+                    </div>
+                    <div className="flex flex-1 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 flex-1 text-xs"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Replace
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={() => setLogoDataUrl("")}
+                        aria-label="Remove logo"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Logo size</Label>
+                      <span className="text-xs text-muted-foreground">{logoScale}%</span>
+                    </div>
+                    <Slider
+                      value={[logoScale]}
+                      min={8}
+                      max={35}
+                      step={1}
+                      onValueChange={(v) => setLogoScale(v[0])}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={logoPadding}
+                        onCheckedChange={(v) => setLogoPadding(v === true)}
+                      />
+                      <span>Background pad behind logo</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={logoRounded}
+                        onCheckedChange={(v) => setLogoRounded(v === true)}
+                      />
+                      <span>Rounded corners</span>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload logo
+                </Button>
+              )}
             </section>
 
             <div className="rounded-xl border border-border bg-accent/40 p-4">
