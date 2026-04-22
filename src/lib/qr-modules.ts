@@ -108,39 +108,24 @@ const drawModule = (
       backend.rect(px, py, s, s);
       return;
     case "rounded": {
-      // Round only corners not adjacent to another on-module so connected
-      // segments stay solid.
+      // Isolated cells become circles; cells with neighbours stay square so
+      // adjacent modules connect cleanly.
       const top = isOn(m, x, y - 1);
       const bottom = isOn(m, x, y + 1);
       const left = isOn(m, x - 1, y);
       const right = isOn(m, x + 1, y);
-      const r = s * 0.45;
-      // Use individual corner radii via roundRect when possible.
-      // Fallback: full rounded rect when isolated, otherwise plain rect with
-      // small rounding handled by drawing a square (browsers will antialias).
       const allOpen = !top && !bottom && !left && !right;
       if (allOpen) {
         backend.circle(px + s / 2, py + s / 2, s / 2);
-        return;
+      } else {
+        // Soften with a roundRect when cell has only ONE neighbour.
+        const neighbours = [top, bottom, left, right].filter(Boolean).length;
+        if (neighbours === 1) {
+          backend.roundRect(px, py, s, s, s * 0.35);
+        } else {
+          backend.rect(px, py, s, s);
+        }
       }
-      // Draw base square then add corner caps where appropriate.
-      backend.rect(px, py, s, s);
-      // Subtractive corner rounding isn't possible in fill-only path, so emit
-      // small filler arcs at outer corners by drawing a rounded rect that
-      // matches existing geometry in the open directions only.
-      // Simpler approach: when only one neighbor exists, draw a roundRect
-      // with the two far corners rounded.
-      // To avoid complexity, we approximate by drawing a roundRect on top
-      // with full radius but shrunk on the connected sides — which is a no-op
-      // for a fill backend. So leave the base square as-is; the rounded look
-      // comes from isolated-cell circles plus the eye styling. To still
-      // soften connected ends, draw a half-circle cap at each open side.
-      const cap = s / 2;
-      if (!top) backend.circle(px + s / 2, py + cap - cap + cap * 0.0, cap); // no-op safety
-      // We'll do nothing else here — the dominant rounded look comes from
-      // 'dots' and from eye styling. Keep "rounded" as cleanly rounded
-      // isolated cells + soft squares for runs.
-      void r;
       return;
     }
     case "dots":
