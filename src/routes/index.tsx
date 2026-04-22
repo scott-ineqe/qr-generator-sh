@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useCallback } from "react";
-import QRCode from "qrcode";
+import {
+  getQRMatrix,
+  renderQRToCanvas,
+  renderQRToSvgPath,
+  MODULE_STYLE_OPTIONS,
+  EYE_STYLE_OPTIONS,
+  type ModuleStyle,
+  type EyeStyle,
+} from "@/lib/qr-modules";
 import {
   QrCode,
   Sparkles,
@@ -12,6 +20,7 @@ import {
   Image as ImageIcon,
   Upload,
   Trash2,
+  Shapes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +83,8 @@ function QRBuilder() {
   const [size, setSize] = useState(512);
   const [margin, setMargin] = useState(2);
   const [ecLevel, setEcLevel] = useState<ECLevel>("M");
+  const [moduleStyle, setModuleStyle] = useState<ModuleStyle>("square");
+  const [eyeStyle, setEyeStyle] = useState<EyeStyle>("square");
   const [dataUrl, setDataUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState<string>("");
@@ -152,13 +163,14 @@ function QRBuilder() {
 
   const renderToCanvas = useCallback(
     async (targetSize: number): Promise<HTMLCanvasElement> => {
-      // Render QR as black-on-transparent mask, then composite gradients.
-      const maskCanvas = document.createElement("canvas");
-      await QRCode.toCanvas(maskCanvas, url, {
-        errorCorrectionLevel: effectiveEc,
+      // Build matrix and render styled modules into a black-on-transparent mask
+      const matrix = await getQRMatrix(url, effectiveEc);
+      const maskCanvas = renderQRToCanvas({
+        matrix,
+        pixelSize: targetSize,
         margin,
-        width: targetSize,
-        color: { dark: "#000000ff", light: "#00000000" },
+        moduleStyle,
+        eyeStyle,
       });
 
       const out = document.createElement("canvas");
@@ -187,29 +199,31 @@ function QRBuilder() {
 
       return out;
     },
-    [url, effectiveEc, margin, fg, bg, bgTransparent, drawLogoOnCanvas],
+    [
+      url,
+      effectiveEc,
+      margin,
+      fg,
+      bg,
+      bgTransparent,
+      drawLogoOnCanvas,
+      moduleStyle,
+      eyeStyle,
+    ],
   );
 
   const buildSvg = useCallback(async (): Promise<string> => {
-    // Build an SVG with gradient defs and use the QR path geometry.
-    const baseSvg = await QRCode.toString(url, {
-      errorCorrectionLevel: effectiveEc,
+    const matrix = await getQRMatrix(url, effectiveEc);
+    const { pathD, size: vbSide } = renderQRToSvgPath({
+      matrix,
+      pixelSize: 0,
       margin,
-      type: "svg",
-      color: { dark: "#000000", light: "#ffffff" },
+      moduleStyle,
+      eyeStyle,
     });
-
-    const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
-    const pathMatch = baseSvg.match(/<path[^>]*d="([^"]+)"[^>]*\/>/g);
-    const viewBox = viewBoxMatch?.[1] ?? `0 0 ${size} ${size}`;
-    const [, , vbW, vbH] = viewBox.split(" ").map(Number);
-
-    // The qrcode lib outputs two paths: bg rect path + modules path.
-    // The last path is the modules.
-    const modulePath =
-      pathMatch && pathMatch.length > 0
-        ? pathMatch[pathMatch.length - 1].match(/d="([^"]+)"/)?.[1]
-        : "";
+    const vbW = vbSide;
+    const vbH = vbSide;
+    const viewBox = `0 0 ${vbW} ${vbH}`;
 
     const gradDef = (id: string, g: GradientValue): string => {
       if (g.type === "solid" || g.stops.length < 2) {
@@ -242,7 +256,7 @@ function QRBuilder() {
         ? bg.stops[0]?.color ?? "#fff"
         : "url(#bgGrad)";
 
-    // Optional centered logo
+    // Optional centered logo (coords in viewBox units = modules)
     let logoSvg = "";
     let logoClipDef = "";
     if (logoDataUrl) {
@@ -270,14 +284,14 @@ function QRBuilder() {
     }
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges" width="${size}" height="${size}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${size}" height="${size}">
   <defs>
     ${gradDef("fgGrad", fg)}
     ${bgTransparent ? "" : gradDef("bgGrad", bg)}
     ${logoClipDef}
   </defs>
   ${bgTransparent ? "" : `<rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>`}
-  ${modulePath ? `<path d="${modulePath}" fill="${fgFill}"/>` : ""}
+  <path d="${pathD}" fill="${fgFill}" fill-rule="evenodd"/>
   ${logoSvg}
 </svg>`;
   }, [
@@ -292,6 +306,8 @@ function QRBuilder() {
     logoScale,
     logoPadding,
     logoRounded,
+    moduleStyle,
+    eyeStyle,
   ]);
 
   const generate = useCallback(async () => {
@@ -463,6 +479,48 @@ function QRBuilder() {
                     <SelectItem value="M">Medium (15%)</SelectItem>
                     <SelectItem value="Q">Quartile (25%)</SelectItem>
                     <SelectItem value="H">High (30%)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Shapes className="h-3.5 w-3.5" />
+                Shapes
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Module style</Label>
+                <Select
+                  value={moduleStyle}
+                  onValueChange={(v) => setModuleStyle(v as ModuleStyle)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODULE_STYLE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Eye style</Label>
+                <Select value={eyeStyle} onValueChange={(v) => setEyeStyle(v as EyeStyle)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EYE_STYLE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
