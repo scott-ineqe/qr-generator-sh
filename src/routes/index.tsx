@@ -486,6 +486,48 @@ function QRBuilder() {
 
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Shapes className="h-3.5 w-3.5" />
+                Shapes
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Module style</Label>
+                <Select
+                  value={moduleStyle}
+                  onValueChange={(v) => setModuleStyle(v as ModuleStyle)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODULE_STYLE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Eye style</Label>
+                <Select value={eyeStyle} onValueChange={(v) => setEyeStyle(v as EyeStyle)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EYE_STYLE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <ImageIcon className="h-3.5 w-3.5" />
                 Logo
               </div>
