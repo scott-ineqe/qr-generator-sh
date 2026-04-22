@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   GradientField,
   type GradientValue,
