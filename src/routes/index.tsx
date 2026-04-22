@@ -254,11 +254,29 @@ function QRBuilder() {
                 <div className="flex items-center gap-3">
                   <div
                     className="h-8 w-8 shrink-0 rounded-md border border-border"
-                    style={{ background: gradientPreviewCss(bg) }}
+                    style={
+                      bgTransparent
+                        ? {
+                            backgroundImage:
+                              "linear-gradient(45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.85 0 0) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.85 0 0) 75%)",
+                            backgroundSize: "8px 8px",
+                            backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
+                          }
+                        : { background: gradientPreviewCss(bg) }
+                    }
                   />
                   <span className="text-xs font-medium">Background</span>
                 </div>
-                <GradientField label="Fill" value={bg} onChange={setBg} />
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={bgTransparent}
+                    onCheckedChange={(v) => setBgTransparent(v === true)}
+                  />
+                  <span>Transparent background</span>
+                </label>
+                {!bgTransparent && (
+                  <GradientField label="Fill" value={bg} onChange={setBg} />
+                )}
               </div>
             </section>
 
