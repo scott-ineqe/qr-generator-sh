@@ -201,7 +201,12 @@ function QRBuilder() {
         flat.width = size;
         flat.height = size;
         const fctx = flat.getContext("2d")!;
-        paintGradient(fctx, bg, size);
+        if (bgTransparent) {
+          fctx.fillStyle = "#ffffff";
+          fctx.fillRect(0, 0, size, size);
+        } else {
+          paintGradient(fctx, bg, size);
+        }
         fctx.drawImage(canvas, 0, 0);
         downloadFile(flat.toDataURL("image/jpeg", 0.95), "qrcode.jpg");
       }
