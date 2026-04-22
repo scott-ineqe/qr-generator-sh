@@ -460,6 +460,97 @@ function QRBuilder() {
               </div>
             </section>
 
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <ImageIcon className="h-3.5 w-3.5" />
+                Logo
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleLogoUpload(f);
+                  e.target.value = "";
+                }}
+              />
+
+              {logoDataUrl ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-2">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-white">
+                      <img src={logoDataUrl} alt="Logo preview" className="h-full w-full object-contain" />
+                    </div>
+                    <div className="flex flex-1 gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 flex-1 text-xs"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Replace
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={() => setLogoDataUrl("")}
+                        aria-label="Remove logo"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Logo size</Label>
+                      <span className="text-xs text-muted-foreground">{logoScale}%</span>
+                    </div>
+                    <Slider
+                      value={[logoScale]}
+                      min={8}
+                      max={35}
+                      step={1}
+                      onValueChange={(v) => setLogoScale(v[0])}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={logoPadding}
+                        onCheckedChange={(v) => setLogoPadding(v === true)}
+                      />
+                      <span>Background pad behind logo</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={logoRounded}
+                        onCheckedChange={(v) => setLogoRounded(v === true)}
+                      />
+                      <span>Rounded corners</span>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload logo
+                </Button>
+              )}
+            </section>
+
             <div className="rounded-xl border border-border bg-accent/40 p-4">
               <div className="flex items-center gap-2 text-xs font-medium text-accent-foreground">
                 <Sparkles className="h-3.5 w-3.5" />
