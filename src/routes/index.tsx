@@ -95,12 +95,45 @@ function QRBuilder() {
       : ecLevel
     : ecLevel;
 
+  const drawLogoOnCanvas = useCallback(
+    async (ctx: CanvasRenderingContext2D, targetSize: number) => {
+      if (!logoDataUrl) return;
+      const img = await loadImage(logoDataUrl);
+      const logoSize = Math.round((targetSize * logoScale) / 100);
+      const cx = (targetSize - logoSize) / 2;
+      const cy = (targetSize - logoSize) / 2;
+      const padPx = Math.round(logoSize * 0.12);
+      const padSize = logoSize + padPx * 2;
+      const padX = cx - padPx;
+      const padY = cy - padPx;
+
+      if (logoPadding) {
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        const r = logoRounded ? padSize * 0.18 : 0;
+        roundedRectPath(ctx, padX, padY, padSize, padSize, r);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.save();
+      if (logoRounded) {
+        const r = logoSize * 0.16;
+        roundedRectPath(ctx, cx, cy, logoSize, logoSize, r);
+        ctx.clip();
+      }
+      ctx.drawImage(img, cx, cy, logoSize, logoSize);
+      ctx.restore();
+    },
+    [logoDataUrl, logoScale, logoPadding, logoRounded],
+  );
+
   const renderToCanvas = useCallback(
     async (targetSize: number): Promise<HTMLCanvasElement> => {
       // Render QR as black-on-transparent mask, then composite gradients.
       const maskCanvas = document.createElement("canvas");
       await QRCode.toCanvas(maskCanvas, url, {
-        errorCorrectionLevel: ecLevel,
+        errorCorrectionLevel: effectiveEc,
         margin,
         width: targetSize,
         color: { dark: "#000000ff", light: "#00000000" },
@@ -126,15 +159,19 @@ function QRBuilder() {
       fgCtx.drawImage(maskCanvas, 0, 0, targetSize, targetSize);
 
       ctx.drawImage(fgCanvas, 0, 0);
+
+      // Logo on top
+      await drawLogoOnCanvas(ctx, targetSize);
+
       return out;
     },
-    [url, ecLevel, margin, fg, bg, bgTransparent],
+    [url, effectiveEc, margin, fg, bg, bgTransparent, drawLogoOnCanvas],
   );
 
   const buildSvg = useCallback(async (): Promise<string> => {
     // Build an SVG with gradient defs and use the QR path geometry.
     const baseSvg = await QRCode.toString(url, {
-      errorCorrectionLevel: ecLevel,
+      errorCorrectionLevel: effectiveEc,
       margin,
       type: "svg",
       color: { dark: "#000000", light: "#ffffff" },
