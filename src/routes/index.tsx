@@ -117,30 +117,34 @@ function QRBuilder() {
     async (ctx: CanvasRenderingContext2D, targetSize: number) => {
       if (!logoDataUrl) return;
       const img = await loadImage(logoDataUrl);
-      const logoSize = Math.round((targetSize * logoScale) / 100);
-      const cx = (targetSize - logoSize) / 2;
-      const cy = (targetSize - logoSize) / 2;
-      const padPx = Math.round(logoSize * 0.12);
-      const padSize = logoSize + padPx * 2;
+      // Slider controls the WIDTH only; height follows the image's natural aspect ratio.
+      const logoW = Math.round((targetSize * logoScale) / 100);
+      const aspect = img.naturalHeight / img.naturalWidth || 1;
+      const logoH = Math.round(logoW * aspect);
+      const cx = (targetSize - logoW) / 2;
+      const cy = (targetSize - logoH) / 2;
+      const padPx = Math.round(Math.max(logoW, logoH) * 0.12);
+      const padW = logoW + padPx * 2;
+      const padH = logoH + padPx * 2;
       const padX = cx - padPx;
       const padY = cy - padPx;
 
       if (logoPadding) {
         ctx.save();
         ctx.fillStyle = "#ffffff";
-        const r = logoRounded ? padSize * 0.18 : 0;
-        roundedRectPath(ctx, padX, padY, padSize, padSize, r);
+        const r = logoRounded ? Math.min(padW, padH) * 0.18 : 0;
+        roundedRectPath(ctx, padX, padY, padW, padH, r);
         ctx.fill();
         ctx.restore();
       }
 
       ctx.save();
       if (logoRounded) {
-        const r = logoSize * 0.16;
-        roundedRectPath(ctx, cx, cy, logoSize, logoSize, r);
+        const r = Math.min(logoW, logoH) * 0.16;
+        roundedRectPath(ctx, cx, cy, logoW, logoH, r);
         ctx.clip();
       }
-      ctx.drawImage(img, cx, cy, logoSize, logoSize);
+      ctx.drawImage(img, cx, cy, logoW, logoH);
       ctx.restore();
     },
     [logoDataUrl, logoScale, logoPadding, logoRounded],
@@ -242,23 +246,27 @@ function QRBuilder() {
     let logoSvg = "";
     let logoClipDef = "";
     if (logoDataUrl) {
-      const logoSize = (vbW * logoScale) / 100;
-      const cx = (vbW - logoSize) / 2;
-      const cy = (vbH - logoSize) / 2;
-      const padPx = logoSize * 0.12;
-      const padSize = logoSize + padPx * 2;
+      const img = await loadImage(logoDataUrl);
+      const aspect = img.naturalHeight / img.naturalWidth || 1;
+      const logoW = (vbW * logoScale) / 100;
+      const logoH = logoW * aspect;
+      const cx = (vbW - logoW) / 2;
+      const cy = (vbH - logoH) / 2;
+      const padPx = Math.max(logoW, logoH) * 0.12;
+      const padW = logoW + padPx * 2;
+      const padH = logoH + padPx * 2;
       const padX = cx - padPx;
       const padY = cy - padPx;
-      const padR = logoRounded ? padSize * 0.18 : 0;
-      const logoR = logoRounded ? logoSize * 0.16 : 0;
+      const padR = logoRounded ? Math.min(padW, padH) * 0.18 : 0;
+      const logoR = logoRounded ? Math.min(logoW, logoH) * 0.16 : 0;
       const padRect = logoPadding
-        ? `<rect x="${padX}" y="${padY}" width="${padSize}" height="${padSize}" rx="${padR}" ry="${padR}" fill="#ffffff"/>`
+        ? `<rect x="${padX}" y="${padY}" width="${padW}" height="${padH}" rx="${padR}" ry="${padR}" fill="#ffffff"/>`
         : "";
       if (logoRounded) {
-        logoClipDef = `<clipPath id="logoClip"><rect x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" rx="${logoR}" ry="${logoR}"/></clipPath>`;
+        logoClipDef = `<clipPath id="logoClip"><rect x="${cx}" y="${cy}" width="${logoW}" height="${logoH}" rx="${logoR}" ry="${logoR}"/></clipPath>`;
       }
       const clipAttr = logoRounded ? ` clip-path="url(#logoClip)"` : "";
-      logoSvg = `${padRect}<image href="${logoDataUrl}" x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"${clipAttr}/>`;
+      logoSvg = `${padRect}<image href="${logoDataUrl}" x="${cx}" y="${cy}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMidYMid meet"${clipAttr}/>`;
     }
 
     return `<?xml version="1.0" encoding="UTF-8"?>
