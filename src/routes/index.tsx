@@ -29,6 +29,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import {
+  GradientField,
+  type GradientValue,
+  defaultGradient,
+  gradientPreviewCss,
+  paintGradient,
+} from "@/components/GradientField";
 
 export const Route = createFileRoute("/")({
   component: QRBuilder,
@@ -39,14 +46,111 @@ type ECLevel = "L" | "M" | "Q" | "H";
 function QRBuilder() {
   const [url, setUrl] = useState("");
   const [generatedUrl, setGeneratedUrl] = useState("");
-  const [fgColor, setFgColor] = useState("#1a1033");
-  const [bgColor, setBgColor] = useState("#ffffff");
+  const [fg, setFg] = useState<GradientValue>(defaultGradient("#1a1033"));
+  const [bg, setBg] = useState<GradientValue>(defaultGradient("#ffffff"));
   const [size, setSize] = useState(512);
   const [margin, setMargin] = useState(2);
   const [ecLevel, setEcLevel] = useState<ECLevel>("M");
   const [dataUrl, setDataUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const svgRef = useRef<string>("");
+
+  const renderToCanvas = useCallback(
+    async (targetSize: number): Promise<HTMLCanvasElement> => {
+      // Render QR as black-on-transparent mask, then composite gradients.
+      const maskCanvas = document.createElement("canvas");
+      await QRCode.toCanvas(maskCanvas, url, {
+        errorCorrectionLevel: ecLevel,
+        margin,
+        width: targetSize,
+        color: { dark: "#000000ff", light: "#00000000" },
+      });
+
+      const out = document.createElement("canvas");
+      out.width = targetSize;
+      out.height = targetSize;
+      const ctx = out.getContext("2d")!;
+
+      // Background
+      paintGradient(ctx, bg, targetSize);
+
+      // Foreground gradient masked by QR modules
+      const fgCanvas = document.createElement("canvas");
+      fgCanvas.width = targetSize;
+      fgCanvas.height = targetSize;
+      const fgCtx = fgCanvas.getContext("2d")!;
+      paintGradient(fgCtx, fg, targetSize);
+      fgCtx.globalCompositeOperation = "destination-in";
+      fgCtx.drawImage(maskCanvas, 0, 0, targetSize, targetSize);
+
+      ctx.drawImage(fgCanvas, 0, 0);
+      return out;
+    },
+    [url, ecLevel, margin, fg, bg],
+  );
+
+  const buildSvg = useCallback(async (): Promise<string> => {
+    // Build an SVG with gradient defs and use the QR path geometry.
+    const baseSvg = await QRCode.toString(url, {
+      errorCorrectionLevel: ecLevel,
+      margin,
+      type: "svg",
+      color: { dark: "#000000", light: "#ffffff" },
+    });
+
+    const viewBoxMatch = baseSvg.match(/viewBox="([^"]+)"/);
+    const pathMatch = baseSvg.match(/<path[^>]*d="([^"]+)"[^>]*\/>/g);
+    const viewBox = viewBoxMatch?.[1] ?? `0 0 ${size} ${size}`;
+    const [, , vbW, vbH] = viewBox.split(" ").map(Number);
+
+    // The qrcode lib outputs two paths: bg rect path + modules path.
+    // The last path is the modules.
+    const modulePath =
+      pathMatch && pathMatch.length > 0
+        ? pathMatch[pathMatch.length - 1].match(/d="([^"]+)"/)?.[1]
+        : "";
+
+    const gradDef = (id: string, g: GradientValue): string => {
+      if (g.type === "solid" || g.stops.length < 2) {
+        return "";
+      }
+      const stops = g.stops
+        .map(
+          (s, i) =>
+            `<stop offset="${(i / (g.stops.length - 1)) * 100}%" stop-color="${s.color}"/>`,
+        )
+        .join("");
+      if (g.type === "linear") {
+        const rad = (g.angle * Math.PI) / 180;
+        const x1 = 50 - Math.cos(rad) * 50;
+        const y1 = 50 - Math.sin(rad) * 50;
+        const x2 = 50 + Math.cos(rad) * 50;
+        const y2 = 50 + Math.sin(rad) * 50;
+        return `<linearGradient id="${id}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${stops}</linearGradient>`;
+      }
+      // SVG has no conic gradient — fall back to radial for both
+      return `<radialGradient id="${id}" cx="50%" cy="50%" r="70%">${stops}</radialGradient>`;
+    };
+
+    const fgFill =
+      fg.type === "solid" || fg.stops.length < 2
+        ? fg.stops[0]?.color ?? "#000"
+        : "url(#fgGrad)";
+    const bgFill =
+      bg.type === "solid" || bg.stops.length < 2
+        ? bg.stops[0]?.color ?? "#fff"
+        : "url(#bgGrad)";
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges" width="${size}" height="${size}">
+  <defs>
+    ${gradDef("fgGrad", fg)}
+    ${gradDef("bgGrad", bg)}
+  </defs>
+  <rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>
+  ${modulePath ? `<path d="${modulePath}" fill="${fgFill}"/>` : ""}
+</svg>`;
+  }, [url, ecLevel, margin, fg, bg, size]);
 
   const generate = useCallback(async () => {
     if (!url.trim()) {
@@ -55,14 +159,9 @@ function QRBuilder() {
     }
     setIsGenerating(true);
     try {
-      const opts = {
-        errorCorrectionLevel: ecLevel,
-        margin,
-        width: size,
-        color: { dark: fgColor, light: bgColor },
-      };
-      const png = await QRCode.toDataURL(url, opts);
-      const svg = await QRCode.toString(url, { ...opts, type: "svg" });
+      const canvas = await renderToCanvas(size);
+      const png = canvas.toDataURL("image/png");
+      const svg = await buildSvg();
       setDataUrl(png);
       svgRef.current = svg;
       setGeneratedUrl(url);
@@ -72,7 +171,7 @@ function QRBuilder() {
     } finally {
       setIsGenerating(false);
     }
-  }, [url, ecLevel, margin, size, fgColor, bgColor]);
+  }, [url, size, renderToCanvas, buildSvg]);
 
   const downloadFile = (href: string, filename: string) => {
     const a = document.createElement("a");
@@ -89,22 +188,18 @@ function QRBuilder() {
       if (format === "svg") {
         const blob = new Blob([svgRef.current], { type: "image/svg+xml" });
         downloadFile(URL.createObjectURL(blob), "qrcode.svg");
+      } else if (format === "png") {
+        downloadFile(dataUrl, "qrcode.png");
       } else {
-        const mime = format === "png" ? "image/png" : "image/jpeg";
-        const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext("2d")!;
-        if (format === "jpg") {
-          ctx.fillStyle = bgColor;
-          ctx.fillRect(0, 0, size, size);
-        }
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, size, size);
-          downloadFile(canvas.toDataURL(mime, 0.95), `qrcode.${format}`);
-        };
-        img.src = dataUrl;
+        // JPG: composite onto opaque background
+        const canvas = await renderToCanvas(size);
+        const flat = document.createElement("canvas");
+        flat.width = size;
+        flat.height = size;
+        const fctx = flat.getContext("2d")!;
+        paintGradient(fctx, bg, size);
+        fctx.drawImage(canvas, 0, 0);
+        downloadFile(flat.toDataURL("image/jpeg", 0.95), "qrcode.jpg");
       }
       toast.success(`Exported as ${format.toUpperCase()}`);
     } catch {
@@ -129,14 +224,32 @@ function QRBuilder() {
           </div>
 
           <div className="space-y-8 p-6">
-            <section className="space-y-3">
+            <section className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <Palette className="h-3.5 w-3.5" />
                 Colors
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Foreground" value={fgColor} onChange={setFgColor} />
-                <ColorField label="Background" value={bgColor} onChange={setBgColor} />
+
+              <div className="space-y-3 rounded-xl border border-border bg-background/50 p-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-8 w-8 shrink-0 rounded-md border border-border"
+                    style={{ background: gradientPreviewCss(fg) }}
+                  />
+                  <span className="text-xs font-medium">Foreground</span>
+                </div>
+                <GradientField label="Fill" value={fg} onChange={setFg} />
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-border bg-background/50 p-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-8 w-8 shrink-0 rounded-md border border-border"
+                    style={{ background: gradientPreviewCss(bg) }}
+                  />
+                  <span className="text-xs font-medium">Background</span>
+                </div>
+                <GradientField label="Fill" value={bg} onChange={setBg} />
               </div>
             </section>
 
@@ -196,8 +309,8 @@ function QRBuilder() {
                 Tip
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Higher error correction allows the code to remain scannable even when partially
-                obscured.
+                Keep strong contrast between foreground and background gradients to ensure your QR
+                stays scannable.
               </p>
             </div>
           </div>
@@ -290,36 +403,6 @@ function QRBuilder() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-2 py-1.5">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-7 w-7 cursor-pointer rounded border-0 bg-transparent"
-        />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-transparent text-xs font-mono outline-none"
-        />
       </div>
     </div>
   );
