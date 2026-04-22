@@ -149,12 +149,12 @@ function QRBuilder() {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges" width="${size}" height="${size}">
   <defs>
     ${gradDef("fgGrad", fg)}
-    ${gradDef("bgGrad", bg)}
+    ${bgTransparent ? "" : gradDef("bgGrad", bg)}
   </defs>
-  <rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>
+  ${bgTransparent ? "" : `<rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>`}
   ${modulePath ? `<path d="${modulePath}" fill="${fgFill}"/>` : ""}
 </svg>`;
-  }, [url, ecLevel, margin, fg, bg, size]);
+  }, [url, ecLevel, margin, fg, bg, size, bgTransparent]);
 
   const generate = useCallback(async () => {
     if (!url.trim()) {
