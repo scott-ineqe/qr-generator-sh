@@ -246,23 +246,27 @@ function QRBuilder() {
     let logoSvg = "";
     let logoClipDef = "";
     if (logoDataUrl) {
-      const logoSize = (vbW * logoScale) / 100;
-      const cx = (vbW - logoSize) / 2;
-      const cy = (vbH - logoSize) / 2;
-      const padPx = logoSize * 0.12;
-      const padSize = logoSize + padPx * 2;
+      const img = await loadImage(logoDataUrl);
+      const aspect = img.naturalHeight / img.naturalWidth || 1;
+      const logoW = (vbW * logoScale) / 100;
+      const logoH = logoW * aspect;
+      const cx = (vbW - logoW) / 2;
+      const cy = (vbH - logoH) / 2;
+      const padPx = Math.max(logoW, logoH) * 0.12;
+      const padW = logoW + padPx * 2;
+      const padH = logoH + padPx * 2;
       const padX = cx - padPx;
       const padY = cy - padPx;
-      const padR = logoRounded ? padSize * 0.18 : 0;
-      const logoR = logoRounded ? logoSize * 0.16 : 0;
+      const padR = logoRounded ? Math.min(padW, padH) * 0.18 : 0;
+      const logoR = logoRounded ? Math.min(logoW, logoH) * 0.16 : 0;
       const padRect = logoPadding
-        ? `<rect x="${padX}" y="${padY}" width="${padSize}" height="${padSize}" rx="${padR}" ry="${padR}" fill="#ffffff"/>`
+        ? `<rect x="${padX}" y="${padY}" width="${padW}" height="${padH}" rx="${padR}" ry="${padR}" fill="#ffffff"/>`
         : "";
       if (logoRounded) {
-        logoClipDef = `<clipPath id="logoClip"><rect x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" rx="${logoR}" ry="${logoR}"/></clipPath>`;
+        logoClipDef = `<clipPath id="logoClip"><rect x="${cx}" y="${cy}" width="${logoW}" height="${logoH}" rx="${logoR}" ry="${logoR}"/></clipPath>`;
       }
       const clipAttr = logoRounded ? ` clip-path="url(#logoClip)"` : "";
-      logoSvg = `${padRect}<image href="${logoDataUrl}" x="${cx}" y="${cy}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"${clipAttr}/>`;
+      logoSvg = `${padRect}<image href="${logoDataUrl}" x="${cx}" y="${cy}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMidYMid meet"${clipAttr}/>`;
     }
 
     return `<?xml version="1.0" encoding="UTF-8"?>
