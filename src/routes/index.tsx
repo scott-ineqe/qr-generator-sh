@@ -310,32 +310,35 @@ function QRBuilder() {
     eyeStyle,
   ]);
 
-  const generate = useCallback(async () => {
-    if (!url.trim()) {
-      toast.error("Please enter a URL first");
-      return;
-    }
-    setIsGenerating(true);
-    try {
-      const canvas = await renderToCanvas(size);
-      const png = canvas.toDataURL("image/png");
-      const svg = await buildSvg();
-      setDataUrl(png);
-      svgRef.current = svg;
-      setGeneratedUrl(url);
-      toast.success("QR code generated");
-    } catch (e) {
-      toast.error("Failed to generate QR code");
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [url, size, renderToCanvas, buildSvg]);
+  const generate = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!url.trim()) {
+        if (!opts?.silent) toast.error("Please enter a URL first");
+        return;
+      }
+      setIsGenerating(true);
+      try {
+        const canvas = await renderToCanvas(size);
+        const png = canvas.toDataURL("image/png");
+        const svg = await buildSvg();
+        setDataUrl(png);
+        svgRef.current = svg;
+        setGeneratedUrl(url);
+        if (!opts?.silent) toast.success("QR code generated");
+      } catch (e) {
+        if (!opts?.silent) toast.error("Failed to generate QR code");
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    [url, size, renderToCanvas, buildSvg],
+  );
 
-  // Auto-regenerate (debounced) whenever any QR option or the URL changes
+  // Auto-regenerate (debounced, silent) whenever any QR option or the URL changes
   useEffect(() => {
     if (!url.trim()) return;
     const t = setTimeout(() => {
-      void generate();
+      void generate({ silent: true });
     }, 200);
     return () => clearTimeout(t);
   }, [generate, url]);
