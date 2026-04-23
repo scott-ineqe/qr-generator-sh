@@ -310,35 +310,38 @@ function QRBuilder() {
     eyeStyle,
   ]);
 
-  const generate = useCallback(async () => {
-    if (!url.trim()) {
-      toast.error("Please enter a URL first");
-      return;
-    }
-    setIsGenerating(true);
-    try {
-      const canvas = await renderToCanvas(size);
-      const png = canvas.toDataURL("image/png");
-      const svg = await buildSvg();
-      setDataUrl(png);
-      svgRef.current = svg;
-      setGeneratedUrl(url);
-      toast.success("QR code generated");
-    } catch (e) {
-      toast.error("Failed to generate QR code");
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [url, size, renderToCanvas, buildSvg]);
+  const generate = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!url.trim()) {
+        if (!opts?.silent) toast.error("Please enter a URL first");
+        return;
+      }
+      setIsGenerating(true);
+      try {
+        const canvas = await renderToCanvas(size);
+        const png = canvas.toDataURL("image/png");
+        const svg = await buildSvg();
+        setDataUrl(png);
+        svgRef.current = svg;
+        setGeneratedUrl(url);
+        if (!opts?.silent) toast.success("QR code generated");
+      } catch (e) {
+        if (!opts?.silent) toast.error("Failed to generate QR code");
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    [url, size, renderToCanvas, buildSvg],
+  );
 
-  // Auto-generate on mount so the preview shows a QR immediately
-  const didAutoGen = useRef(false);
+  // Auto-regenerate (debounced, silent) whenever any QR option or the URL changes
   useEffect(() => {
-    if (didAutoGen.current) return;
-    didAutoGen.current = true;
-    void generate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!url.trim()) return;
+    const t = setTimeout(() => {
+      void generate({ silent: true });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [generate, url]);
 
   const downloadFile = (href: string, filename: string) => {
     const a = document.createElement("a");
@@ -677,7 +680,7 @@ function QRBuilder() {
                 </DropdownMenu>
               )}
               <Button
-                onClick={generate}
+                onClick={() => generate()}
                 disabled={isGenerating}
                 className="gap-2 bg-[image:var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-elegant)] hover:opacity-95 transition-[var(--transition-smooth)]"
               >
