@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   getQRMatrix,
   renderQRToCanvas,
@@ -75,8 +75,8 @@ function roundedRectPath(
 }
 
 function QRBuilder() {
-  const [url, setUrl] = useState("");
-  const [generatedUrl, setGeneratedUrl] = useState("");
+  const [url, setUrl] = useState("https://qr-generator-sh.lovable.app");
+  const [generatedUrl, setGeneratedUrl] = useState("https://qr-generator-sh.lovable.app");
   const [fg, setFg] = useState<GradientValue>(defaultGradient("#1a1033"));
   const [bg, setBg] = useState<GradientValue>(defaultGradient("#ffffff"));
   const [bgTransparent, setBgTransparent] = useState(false);
@@ -330,6 +330,15 @@ function QRBuilder() {
       setIsGenerating(false);
     }
   }, [url, size, renderToCanvas, buildSvg]);
+
+  // Auto-generate on mount so the preview shows a QR immediately
+  const didAutoGen = useRef(false);
+  useEffect(() => {
+    if (didAutoGen.current) return;
+    didAutoGen.current = true;
+    void generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const downloadFile = (href: string, filename: string) => {
     const a = document.createElement("a");
