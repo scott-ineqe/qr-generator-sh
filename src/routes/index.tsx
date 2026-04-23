@@ -332,8 +332,11 @@ function QRBuilder() {
   }, [url, size, renderToCanvas, buildSvg]);
 
   // Auto-generate on mount so the preview shows a QR immediately
+  const didAutoGen = useRef(false);
   useEffect(() => {
-    generate();
+    if (didAutoGen.current) return;
+    didAutoGen.current = true;
+    void generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
