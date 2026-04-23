@@ -386,7 +386,7 @@ function QRBuilder() {
             </div>
           </div>
 
-          <div className="space-y-8 p-6">
+          <div className="flex-1 space-y-8 overflow-y-auto p-6">
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <Palette className="h-3.5 w-3.5" />
