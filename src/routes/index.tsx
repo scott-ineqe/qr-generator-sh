@@ -371,12 +371,12 @@ function QRBuilder() {
   };
 
   return (
-    <div className="min-h-screen bg-[image:var(--gradient-subtle)]">
+    <div className="h-screen overflow-hidden bg-[image:var(--gradient-subtle)]">
       <Toaster />
-      <div className="flex min-h-screen">
+      <div className="flex h-screen">
         {/* Sidebar */}
-        <aside className="w-80 shrink-0 border-r border-border bg-card/60 backdrop-blur-xl">
-          <div className="flex h-16 items-center gap-2 border-b border-border px-6">
+        <aside className="flex h-screen w-80 shrink-0 flex-col border-r border-border bg-card/60 backdrop-blur-xl">
+          <div className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-6">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[image:var(--gradient-primary)] shadow-[var(--shadow-elegant)]">
               <QrCode className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -386,7 +386,7 @@ function QRBuilder() {
             </div>
           </div>
 
-          <div className="space-y-8 p-6">
+          <div className="flex-1 space-y-8 overflow-y-auto p-6">
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <Palette className="h-3.5 w-3.5" />
@@ -631,9 +631,9 @@ function QRBuilder() {
         </aside>
 
         {/* Main */}
-        <main className="flex flex-1 flex-col">
+        <main className="flex h-screen flex-1 flex-col overflow-hidden">
           {/* Top bar */}
-          <header className="flex h-16 items-center gap-3 border-b border-border bg-background/60 px-6 backdrop-blur-xl">
+          <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background/60 px-6 backdrop-blur-xl">
             <div className="relative flex-1 max-w-2xl">
               <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -679,14 +679,15 @@ function QRBuilder() {
           </header>
 
           {/* Staging */}
-          <div className="flex-1 flex items-center justify-center p-10">
-            <div className="w-full max-w-2xl">
+          <div className="min-h-0 flex-1 flex items-center justify-center p-10 overflow-hidden">
+            <div className="flex h-full w-full max-w-2xl flex-col items-center justify-center">
               <div
-                className="relative rounded-3xl border border-border bg-card p-12 shadow-[var(--shadow-soft)]"
+                className="relative aspect-square max-h-full w-auto max-w-full rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]"
                 style={{
                   backgroundImage:
                     "radial-gradient(circle at 1px 1px, oklch(0.5 0.05 270 / 0.08) 1px, transparent 0)",
                   backgroundSize: "20px 20px",
+                  height: "min(100%, 100%)",
                 }}
               >
                 <div
