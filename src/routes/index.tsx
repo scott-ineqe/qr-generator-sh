@@ -680,7 +680,7 @@ function QRBuilder() {
                 </DropdownMenu>
               )}
               <Button
-                onClick={generate}
+                onClick={() => generate()}
                 disabled={isGenerating}
                 className="gap-2 bg-[image:var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-elegant)] hover:opacity-95 transition-[var(--transition-smooth)]"
               >
