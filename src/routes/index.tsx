@@ -679,8 +679,8 @@ function QRBuilder() {
           </header>
 
           {/* Staging */}
-          <div className="flex-1 flex items-center justify-center p-10">
-            <div className="w-full max-w-2xl">
+          <div className="min-h-0 flex-1 flex items-center justify-center p-10 overflow-hidden">
+            <div className="flex h-full w-full max-w-2xl flex-col items-center justify-center">
               <div
                 className="relative rounded-3xl border border-border bg-card p-12 shadow-[var(--shadow-soft)]"
                 style={{
