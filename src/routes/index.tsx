@@ -371,12 +371,12 @@ function QRBuilder() {
   };
 
   return (
-    <div className="min-h-screen bg-[image:var(--gradient-subtle)]">
+    <div className="h-screen overflow-hidden bg-[image:var(--gradient-subtle)]">
       <Toaster />
-      <div className="flex min-h-screen">
+      <div className="flex h-screen">
         {/* Sidebar */}
-        <aside className="w-80 shrink-0 border-r border-border bg-card/60 backdrop-blur-xl">
-          <div className="flex h-16 items-center gap-2 border-b border-border px-6">
+        <aside className="flex h-screen w-80 shrink-0 flex-col border-r border-border bg-card/60 backdrop-blur-xl">
+          <div className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-6">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[image:var(--gradient-primary)] shadow-[var(--shadow-elegant)]">
               <QrCode className="h-5 w-5 text-primary-foreground" />
             </div>
