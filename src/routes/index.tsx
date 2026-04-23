@@ -331,14 +331,14 @@ function QRBuilder() {
     }
   }, [url, size, renderToCanvas, buildSvg]);
 
-  // Auto-generate on mount so the preview shows a QR immediately
-  const didAutoGen = useRef(false);
+  // Auto-regenerate (debounced) whenever any QR option or the URL changes
   useEffect(() => {
-    if (didAutoGen.current) return;
-    didAutoGen.current = true;
-    void generate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!url.trim()) return;
+    const t = setTimeout(() => {
+      void generate();
+    }, 200);
+    return () => clearTimeout(t);
+  }, [generate, url]);
 
   const downloadFile = (href: string, filename: string) => {
     const a = document.createElement("a");
