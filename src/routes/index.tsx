@@ -331,6 +331,12 @@ function QRBuilder() {
     }
   }, [url, size, renderToCanvas, buildSvg]);
 
+  // Auto-generate on mount so the preview shows a QR immediately
+  useEffect(() => {
+    generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const downloadFile = (href: string, filename: string) => {
     const a = document.createElement("a");
     a.href = href;
