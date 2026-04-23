@@ -75,8 +75,8 @@ function roundedRectPath(
 }
 
 function QRBuilder() {
-  const [url, setUrl] = useState("");
-  const [generatedUrl, setGeneratedUrl] = useState("");
+  const [url, setUrl] = useState("https://qr-generator-sh.lovable.app");
+  const [generatedUrl, setGeneratedUrl] = useState("https://qr-generator-sh.lovable.app");
   const [fg, setFg] = useState<GradientValue>(defaultGradient("#1a1033"));
   const [bg, setBg] = useState<GradientValue>(defaultGradient("#ffffff"));
   const [bgTransparent, setBgTransparent] = useState(false);
