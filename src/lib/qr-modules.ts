@@ -361,8 +361,11 @@ const makeSvgBackend = (paths: string[]): PathBackend => ({
     const iw = w - thickness * 2;
     const ih = h - thickness * 2;
     const ri = Math.min(rInner, iw / 2, ih / 2);
-    // Inner path drawn reversed so even-odd creates a hole
-    const inner = `M${ix + iw - ri} ${iy}a${ri} ${ri} 0 0 0 ${ri} ${ri}v${ih - 2 * ri}a${ri} ${ri} 0 0 0 ${-ri} ${ri}h${-(iw - 2 * ri)}a${ri} ${ri} 0 0 0 ${-ri} ${-ri}v${-(ih - 2 * ri)}a${ri} ${ri} 0 0 0 ${ri} ${-ri}z`;
+    // Inner path: same clockwise winding as outer, but evenodd fill rule
+    // still produces a hole because the inner region is enclosed twice.
+    // sweep-flag=1 keeps the corners curving inward (concave) — sweep=0
+    // produces outward bumps that eat into the ring.
+    const inner = `M${ix + ri} ${iy}h${iw - 2 * ri}a${ri} ${ri} 0 0 1 ${ri} ${ri}v${ih - 2 * ri}a${ri} ${ri} 0 0 1 ${-ri} ${ri}h${-(iw - 2 * ri)}a${ri} ${ri} 0 0 1 ${-ri} ${-ri}v${-(ih - 2 * ri)}a${ri} ${ri} 0 0 1 ${ri} ${-ri}z`;
     paths.push(outer + inner);
   },
   ringCircle: (cx, cy, rOuter, thickness) => {
