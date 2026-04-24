@@ -43,6 +43,12 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   GradientField,
   type GradientValue,
   defaultGradient,
@@ -398,236 +404,242 @@ function QRBuilder() {
             </div>
           </div>
 
-          <div className="flex-1 space-y-8 overflow-y-auto p-6">
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <Palette className="h-3.5 w-3.5" />
-                Colors
-              </div>
-
-              <div className="space-y-3 rounded-xl border border-border bg-background/50 p-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="h-8 w-8 shrink-0 rounded-md border border-border"
-                    style={{ background: gradientPreviewCss(fg) }}
-                  />
-                  <span className="text-xs font-medium">Foreground</span>
-                </div>
-                <GradientField label="Fill" value={fg} onChange={setFg} />
-              </div>
-
-              <div className="space-y-3 rounded-xl border border-border bg-background/50 p-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="h-8 w-8 shrink-0 rounded-md border border-border"
-                    style={
-                      bgTransparent
-                        ? {
-                            backgroundImage:
-                              "linear-gradient(45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.85 0 0) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.85 0 0) 75%)",
-                            backgroundSize: "8px 8px",
-                            backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
-                          }
-                        : { background: gradientPreviewCss(bg) }
-                    }
-                  />
-                  <span className="text-xs font-medium">Background</span>
-                </div>
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                  <Checkbox
-                    checked={bgTransparent}
-                    onCheckedChange={(v) => setBgTransparent(v === true)}
-                  />
-                  <span>Transparent background</span>
-                </label>
-                {!bgTransparent && (
-                  <GradientField label="Fill" value={bg} onChange={setBg} />
-                )}
-              </div>
-            </section>
-
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <Settings2 className="h-3.5 w-3.5" />
-                Settings
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Size</Label>
-                  <span className="text-xs text-muted-foreground">{size}px</span>
-                </div>
-                <Slider
-                  value={[size]}
-                  min={128}
-                  max={1024}
-                  step={32}
-                  onValueChange={(v) => setSize(v[0])}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Margin</Label>
-                  <span className="text-xs text-muted-foreground">{margin}</span>
-                </div>
-                <Slider
-                  value={[margin]}
-                  min={0}
-                  max={8}
-                  step={1}
-                  onValueChange={(v) => setMargin(v[0])}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm">Error correction</Label>
-                <Select value={ecLevel} onValueChange={(v) => setEcLevel(v as ECLevel)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="L">Low (7%)</SelectItem>
-                    <SelectItem value="M">Medium (15%)</SelectItem>
-                    <SelectItem value="Q">Quartile (25%)</SelectItem>
-                    <SelectItem value="H">High (30%)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </section>
-
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <Shapes className="h-3.5 w-3.5" />
-                Shapes
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm">Module style</Label>
-                <Select
-                  value={moduleStyle}
-                  onValueChange={(v) => setModuleStyle(v as ModuleStyle)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MODULE_STYLE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm">Eye style</Label>
-                <Select value={eyeStyle} onValueChange={(v) => setEyeStyle(v as EyeStyle)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EYE_STYLE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </section>
-
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <ImageIcon className="h-3.5 w-3.5" />
-                Logo
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleLogoUpload(f);
-                  e.target.value = "";
-                }}
-              />
-
-              {logoDataUrl ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-2">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-white">
-                      <img src={logoDataUrl} alt="Logo preview" className="h-full w-full object-contain" />
+          <div className="flex-1 overflow-y-auto p-6">
+            <Accordion type="multiple" className="space-y-4">
+              <AccordionItem value="colors">
+                <AccordionTrigger className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline">
+                  <Palette className="h-3.5 w-3.5" />
+                  Colors
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4">
+                  <div className="space-y-3 rounded-xl border border-border bg-background/50 p-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-8 w-8 shrink-0 rounded-md border border-border"
+                        style={{ background: gradientPreviewCss(fg) }}
+                      />
+                      <span className="text-xs font-medium">Foreground</span>
                     </div>
-                    <div className="flex flex-1 gap-1.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 flex-1 text-xs"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        Replace
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-2"
-                        onClick={() => setLogoDataUrl("")}
-                        aria-label="Remove logo"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    <GradientField label="Fill" value={fg} onChange={setFg} />
                   </div>
 
+                  <div className="space-y-3 rounded-xl border border-border bg-background/50 p-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-8 w-8 shrink-0 rounded-md border border-border"
+                        style={
+                          bgTransparent
+                            ? {
+                                backgroundImage:
+                                  "linear-gradient(45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.85 0 0) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.85 0 0) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.85 0 0) 75%)",
+                                backgroundSize: "8px 8px",
+                                backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
+                              }
+                            : { background: gradientPreviewCss(bg) }
+                        }
+                      />
+                      <span className="text-xs font-medium">Background</span>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <Checkbox
+                        checked={bgTransparent}
+                        onCheckedChange={(v) => setBgTransparent(v === true)}
+                      />
+                      <span>Transparent background</span>
+                    </label>
+                    {!bgTransparent && (
+                      <GradientField label="Fill" value={bg} onChange={setBg} />
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="settings">
+                <AccordionTrigger className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Settings
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm">Logo size</Label>
-                      <span className="text-xs text-muted-foreground">{logoScale}%</span>
+                      <Label className="text-sm">Size</Label>
+                      <span className="text-xs text-muted-foreground">{size}px</span>
                     </div>
                     <Slider
-                      value={[logoScale]}
-                      min={8}
-                      max={35}
-                      step={1}
-                      onValueChange={(v) => setLogoScale(v[0])}
+                      value={[size]}
+                      min={128}
+                      max={1024}
+                      step={32}
+                      onValueChange={(v) => setSize(v[0])}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <Checkbox
-                        checked={logoPadding}
-                        onCheckedChange={(v) => setLogoPadding(v === true)}
-                      />
-                      <span>Background pad behind logo</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <Checkbox
-                        checked={logoRounded}
-                        onCheckedChange={(v) => setLogoRounded(v === true)}
-                      />
-                      <span>Rounded corners</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Margin</Label>
+                      <span className="text-xs text-muted-foreground">{margin}</span>
+                    </div>
+                    <Slider
+                      value={[margin]}
+                      min={0}
+                      max={8}
+                      step={1}
+                      onValueChange={(v) => setMargin(v[0])}
+                    />
                   </div>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload logo
-                </Button>
-              )}
-            </section>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm">Error correction</Label>
+                    <Select value={ecLevel} onValueChange={(v) => setEcLevel(v as ECLevel)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="L">Low (7%)</SelectItem>
+                        <SelectItem value="M">Medium (15%)</SelectItem>
+                        <SelectItem value="Q">Quartile (25%)</SelectItem>
+                        <SelectItem value="H">High (30%)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="shapes">
+                <AccordionTrigger className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline">
+                  <Shapes className="h-3.5 w-3.5" />
+                  Shapes
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Module style</Label>
+                    <Select
+                      value={moduleStyle}
+                      onValueChange={(v) => setModuleStyle(v as ModuleStyle)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MODULE_STYLE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm">Eye style</Label>
+                    <Select value={eyeStyle} onValueChange={(v) => setEyeStyle(v as EyeStyle)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EYE_STYLE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="logo">
+                <AccordionTrigger className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline">
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Logo
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleLogoUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+
+                  {logoDataUrl ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 rounded-lg border border-border bg-background/50 p-2">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-white">
+                          <img src={logoDataUrl} alt="Logo preview" className="h-full w-full object-contain" />
+                        </div>
+                        <div className="flex flex-1 gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 flex-1 text-xs"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            Replace
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() => setLogoDataUrl("")}
+                            aria-label="Remove logo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Logo size</Label>
+                          <span className="text-xs text-muted-foreground">{logoScale}%</span>
+                        </div>
+                        <Slider
+                          value={[logoScale]}
+                          min={8}
+                          max={35}
+                          step={1}
+                          onValueChange={(v) => setLogoScale(v[0])}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-xs cursor-pointer">
+                          <Checkbox
+                            checked={logoPadding}
+                            onCheckedChange={(v) => setLogoPadding(v === true)}
+                          />
+                          <span>Background pad behind logo</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs cursor-pointer">
+                          <Checkbox
+                            checked={logoRounded}
+                            onCheckedChange={(v) => setLogoRounded(v === true)}
+                          />
+                          <span>Rounded corners</span>
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload logo
+                    </Button>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
             <div className="rounded-xl border border-border bg-accent/40 p-4">
               <div className="flex items-center gap-2 text-xs font-medium text-accent-foreground">
