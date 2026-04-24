@@ -394,7 +394,7 @@ function QRBuilder() {
             </div>
             <div>
               <h1 className="text-sm font-semibold leading-tight">QR Studio</h1>
-              <p className="text-xs text-muted-foreground">Modern QR builder</p>
+              <p className="text-xs text-muted-foreground">Built by Scott Hogsett</p>
             </div>
           </div>
 
