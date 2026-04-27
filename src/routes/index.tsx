@@ -405,7 +405,7 @@ function QRBuilder() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
-            <Accordion type="multiple" className="space-y-4">
+            <Accordion type="multiple" className="space-y-4 mb-4">
               <AccordionItem value="colors">
                 <AccordionTrigger className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline">
                   <Palette className="h-3.5 w-3.5" />
