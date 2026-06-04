@@ -119,7 +119,11 @@ function QRBuilder() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setLogoDataUrl(String(reader.result));
+    reader.onload = () => {
+      setLogoDataUrl(String(reader.result));
+      // Regenerate immediately after logo is loaded
+      setTimeout(() => generate({ silent: true }), 0);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -227,9 +231,8 @@ function QRBuilder() {
       moduleStyle,
       eyeStyle,
     });
-    const vbW = vbSide;
-    const vbH = vbSide;
-    const viewBox = `0 0 ${vbW} ${vbH}`;
+    const scale = size / vbSide;
+    const viewBox = `0 0 ${size} ${size}`;
 
     const gradDef = (id: string, g: GradientValue): string => {
       if (g.type === "solid" || g.stops.length < 2) {
@@ -262,16 +265,16 @@ function QRBuilder() {
         ? bg.stops[0]?.color ?? "#fff"
         : "url(#bgGrad)";
 
-    // Optional centered logo (coords in viewBox units = modules)
+    // Optional centered logo (coords in pixel units)
     let logoSvg = "";
     let logoClipDef = "";
     if (logoDataUrl) {
       const img = await loadImage(logoDataUrl);
       const aspect = img.naturalHeight / img.naturalWidth || 1;
-      const logoW = (vbW * logoScale) / 100;
+      const logoW = (size * logoScale) / 100;
       const logoH = logoW * aspect;
-      const cx = (vbW - logoW) / 2;
-      const cy = (vbH - logoH) / 2;
+      const cx = (size - logoW) / 2;
+      const cy = (size - logoH) / 2;
       const padPx = Math.max(logoW, logoH) * 0.12;
       const padW = logoW + padPx * 2;
       const padH = logoH + padPx * 2;
@@ -296,8 +299,8 @@ function QRBuilder() {
     ${bgTransparent ? "" : gradDef("bgGrad", bg)}
     ${logoClipDef}
   </defs>
-  ${bgTransparent ? "" : `<rect width="${vbW}" height="${vbH}" fill="${bgFill}"/>`}
-  <path d="${pathD}" fill="${fgFill}" fill-rule="evenodd"/>
+  ${bgTransparent ? "" : `<rect width="${size}" height="${size}" fill="${bgFill}"/>`}
+  <g transform="scale(${scale})"><path d="${pathD}" fill="${fgFill}" fill-rule="evenodd"/></g>
   ${logoSvg}
 </svg>`;
   }, [
@@ -347,7 +350,7 @@ function QRBuilder() {
       void generate({ silent: true });
     }, 200);
     return () => clearTimeout(t);
-  }, [generate, url]);
+  }, [generate, url, fg, bg, bgTransparent, size, margin, ecLevel, moduleStyle, eyeStyle, logoDataUrl, logoScale, logoPadding, logoRounded]);
 
   const downloadFile = (href: string, filename: string) => {
     const a = document.createElement("a");
